@@ -142,7 +142,7 @@
   <!-- MENU PRINCIPAL -->
   <div id="menu-screen" class="screen active">
     <!-- LOGO RIFF MASTER -->
-    <img src="Riff Master.jpg" alt="Riff Master Logo" id="main-logo" onerror="this.style.display='none'; alert('Logo não encontrada! Verifique se o arquivo Riff Master.jpg está no GitHub.')">
+    <img src="Riff Master_2.jpg" alt="Riff Master Logo" id="main-logo" onerror="this.style.display='none'; alert('Logo não encontrada! Verifique se o arquivo Riff Master_2.jpg está no GitHub.')">
     
     <ul class="menu-list">
       <li onclick="showScreen('setlist-screen'); renderSetlist();">Catálogo de Músicas</li>
@@ -246,11 +246,11 @@
       if(id === 'game-screen') resizeCanvas();
     }
 
-    // AQUI ESTÁ O SEU CATÁLOGO DE MÚSICAS!
+    // AQUI ESTÁ O SEU CATÁLOGO DE MÚSICAS COM A PASTA NOVA "Riff Music"!
     const setlist = [
-      { id: 1, title: "Primeira Música", artist: "Banda 1", file: "Guitar Music/musica1.mp3", bestScore: 0 },
-      { id: 2, title: "Segunda Música", artist: "Banda 2", file: "Guitar Music/musica2.mp3", bestScore: 0 },
-      { id: 3, title: "Adicione mais uma", artist: "Seu Artista", file: "Guitar Music/musica3.mp3", bestScore: 0 }
+      { id: 1, title: "Primeira Música", artist: "Banda 1", file: "Riff Music/musica1.mp3", bestScore: 0 },
+      { id: 2, title: "Segunda Música", artist: "Banda 2", file: "Riff Music/musica2.mp3", bestScore: 0 },
+      { id: 3, title: "Adicione mais uma", artist: "Seu Artista", file: "Riff Music/musica3.mp3", bestScore: 0 }
     ];
 
     let currentSongId = null;
@@ -354,7 +354,7 @@
       } catch (e) { 
         // 4. Se der erro, mostra alerta claro e não abre a tela preta.
         console.error(e);
-        alert(`❌ FALHA AO CARREGAR A MÚSICA!\n\nErro: O jogo tentou buscar "${filePath}", mas não encontrou.\n\nVerifique no seu repositório do GitHub se:\n- A pasta está escrita EXATAMENTE "Guitar Music".\n- O arquivo está com o nome e a extensão corretos.\n\nO GitHub diferencia maiúsculas de minúsculas!`);
+        alert(`❌ FALHA AO CARREGAR A MÚSICA!\n\nErro: O jogo tentou buscar "${filePath}", mas não encontrou.\n\nVerifique no seu repositório do GitHub se:\n- A pasta está escrita EXATAMENTE "Riff Music".\n- O arquivo está com o nome e a extensão corretos.\n\nO GitHub diferencia maiúsculas de minúsculas!`);
       }
     }
 
