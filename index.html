@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riff Master - Untamed Sound</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    :root {
+      --rm-gold: #c5a059;
+      --rm-dark: #111;
+      --rm-panel: rgba(15, 15, 15, 0.95);
+      --font-ui: 'Teko', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+      color: #fff;
+      font-family: var(--font-ui);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 100vw; height: 100vh; overflow: hidden;
+    }
+
+    /* SISTEMA DE TELAS */
+    .screen { display: none; width: 100%; height: 100%; padding: 20px; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.5s ease-in-out; }
+    .screen.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+    /* MENU PRINCIPAL & LOGO */
+    #main-logo {
+      width: 100%; max-width: 700px;
+      margin-bottom: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 50px rgba(197, 160, 89, 0.3);
+      transition: transform 0.3s;
+    }
+    #main-logo:hover { transform: scale(1.02); }
+
+    .menu-list { list-style: none; text-align: center; width: 350px; z-index: 10; }
+    .menu-list li {
+      font-size: 2.5rem; font-weight: 600; text-transform: uppercase;
+      padding: 12px; margin: 10px 0; background: rgba(0,0,0,0.6); border: 2px solid #333;
+      cursor: pointer; transition: 0.2s; border-radius: 8px; color: #ddd;
+    }
+    .menu-list li:hover {
+      color: var(--rm-gold); border-color: var(--rm-gold); background: rgba(197, 160, 89, 0.1);
+      transform: scale(1.05); text-shadow: 0 0 10px var(--rm-gold); box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+    }
+
+    /* PAINÉIS SECUNDÁRIOS (CATÁLOGO) */
+    .panel-container {
+      background: var(--rm-panel); border: 2px solid #333;
+      padding: 30px; width: 100%; max-width: 800px; border-radius: 12px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); border-top: 5px solid var(--rm-gold);
+    }
+    .panel-container h2 { font-size: 3.5rem; color: var(--rm-gold); text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+    
+    select, input[type="text"] {
+      width: 100%; padding: 12px; border-radius: 6px; border: 2px solid #444;
+      background: #0a0a0a; color: #fff; font-family: var(--font-ui); font-size: 1.5rem; margin-bottom: 15px;
+    }
+
+    .song-list { max-height: 400px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
+    .song-list::-webkit-scrollbar { width: 8px; }
+    .song-list::-webkit-scrollbar-thumb { background: var(--rm-gold); border-radius: 4px; }
+    
+    .song-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #151515; padding: 15px 20px; margin-bottom: 10px; cursor: pointer;
+      border-left: 5px solid #444; transition: 0.3s; border-radius: 4px;
+    }
+    .song-item:hover { background: #222; border-left: 10px solid var(--rm-gold); padding-left: 25px; box-shadow: 0 0 15px rgba(197, 160, 89, 0.2); }
+    .song-title { font-size: 1.8rem; font-weight: bold; color: #fff; }
+    .song-artist { font-size: 1.2rem; color: #aaa; }
+    .song-score { font-size: 1.5rem; color: var(--rm-gold); font-weight: bold; }
+    .song-play-icon { font-size: 1.8rem; opacity: 0; transition: 0.3s; margin-left: 15px; }
+    .song-item:hover .song-play-icon { opacity: 1; color: var(--rm-gold); }
+
+    button {
+      width: 100%; padding: 15px; font-size: 1.8rem; font-family: var(--font-ui); font-weight: bold;
+      background: linear-gradient(135deg, #333, #111); color: white;
+      border: 2px solid #555; border-radius: 6px; cursor: pointer; transition: 0.2s; text-transform: uppercase;
+    }
+    button:hover { background: linear-gradient(135deg, var(--rm-gold), #8a6d3b); border-color: #fff; box-shadow: 0 5px 15px rgba(197, 160, 89, 0.4); transform: translateY(-3px); }
+    button.btn-back { background: #222; border-color: #444; margin-top: 10px; }
+
+    /* LAYOUT DO JOGO - TELA CHEIA */
+    #game-screen { padding: 0; display: none; width: 100vw; height: 100vh; position: relative; background: #000; }
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+    
+    /* INTERFACE SOBREPOSTA (OVERLAYS) */
+    .hud-overlay {
+      position: absolute; top: 30px; left: 40px; z-index: 10;
+      font-size: 3rem; font-weight: bold; text-shadow: 2px 2px 0 #000;
+      background: rgba(0,0,0,0.6); padding: 15px 30px; border-radius: 10px; border-left: 5px solid var(--rm-gold);
+    }
+    .hud-overlay span { color: var(--rm-gold); }
+
+    .side-panel-overlay {
+      position: absolute; top: 30px; right: 40px; z-index: 10; width: 350px;
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .overlay-card {
+      background: rgba(10, 10, 10, 0.85); padding: 15px; border-radius: 10px; border: 1px solid #333;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    }
+    .overlay-card h3 { font-size: 1.5rem; color: var(--rm-gold); margin-bottom: 5px; }
+    #status-msg { font-size: 1.2rem; font-weight: bold; color: #fff; }
+
+    .controls-legend-overlay {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10;
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;
+      background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 15px;
+    }
+    .key-box { background: #111; border: 2px solid #333; border-radius: 8px; padding: 5px 15px; text-align: center; }
+    .key-box .title { font-weight: bold; font-size: 1.2rem; }
+    .key-box .btn-info { color: #888; font-size: 1rem; font-family: sans-serif; }
+    
+    /* Cores das Notas */
+    .c-green  { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.3); } .c-green .title { color: #2ecc71; }
+    .c-red    { border-color: #e74c3c; box-shadow: 0 0 10px rgba(231, 76, 60, 0.3); } .c-red .title { color: #e74c3c; }
+    .c-yellow { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); } .c-yellow .title { color: #f1c40f; }
+    .c-blue   { border-color: #3498db; box-shadow: 0 0 10px rgba(52, 152, 219, 0.3); } .c-blue .title { color: #3498db; }
+    .c-orange { border-color: #e67e22; box-shadow: 0 0 10px rgba(230, 126, 34, 0.3); } .c-orange .title { color: #e67e22; }
+
+    /* Modais e Toasts */
+    #hub-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: #111; border: 3px solid var(--rm-gold); padding: 30px; border-radius: 12px; width: 500px; text-align: center; }
+    .mapping-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 1.5rem; }
+    .map-btn { width: auto; padding: 8px 15px; font-size: 1.2rem; background: #222; border-color: #555; }
+
+    #toast-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150px); background: linear-gradient(135deg, var(--rm-gold), #8a6d3b); color: #000; padding: 15px 30px; border-radius: 8px; font-family: sans-serif; box-shadow: 0 5px 20px rgba(0,0,0,0.8); transition: 0.4s ease-in-out; z-index: 2000; display: flex; align-items: center; gap: 15px; }
+    #toast-notification.show { transform: translateX(-50%) translateY(0); }
+  </style>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+  <!-- MENU PRINCIPAL -->
+  <div id="menu-screen" class="screen active">
+    <!-- IMAGEM DA LOGO NOVA RIFF MASTER -->
+    <img src="Riff Master_2.jpg" alt="Riff Master Logo" id="main-logo">
+    
+    <ul class="menu-list">
+      <li onclick="showScreen('setlist-screen'); renderSetlist();">Catálogo de Músicas</li>
+      <li onclick="showScreen('youtube-screen')">Modo YouTube</li>
+      <li onclick="openHub()">Controles</li>
+    </ul>
+  </div>
+
+  <!-- TELA DE SETLIST / CATÁLOGO -->
+  <div id="setlist-screen" class="screen">
+    <div class="panel-container">
+      <h2>🎸 CATÁLOGO DE MÚSICAS 🎸</h2>
+      
+      <label style="font-size: 1.5rem; color: #aaa;">Dificuldade da Esteira:</label>
+      <select id="difficultySelect">
+        <option value="easy">Easy (Lento - Iniciantes)</option>
+        <option value="medium" selected>Medium (Padrão - Rocker)</option>
+        <option value="hard">Hard (Rápido - Riff Master)</option>
+      </select>
+      
+      <p style="font-size: 1.2rem; color: #888; text-align: center; margin-bottom: 10px;">Clique em uma música abaixo para começar a tocar</p>
+      
+      <div class="song-list" id="setlist-songs">
+        <!-- O JS vai gerar a lista aqui -->
+      </div>
+      
+      <button class="btn-back" onclick="showScreen('menu-screen')">Voltar ao Início</button>
+    </div>
+  </div>
+
+  <!-- TELA YOUTUBE -->
+  <div id="youtube-screen" class="screen">
+    <div class="panel-container">
+      <h2>MODO YOUTUBE</h2>
+      <select id="ytDifficultySelect">
+        <option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option>
+      </select>
+      <input type="text" id="ytUrl" placeholder="Cole o Link do vídeo (ex: https://youtu.be/...)">
+      <button id="startYtBtn">CARREGAR VÍDEO</button>
+      <button class="btn-back" onclick="showScreen('menu-screen')">Voltar</button>
+    </div>
+  </div>
+
+  <!-- TELA DO JOGO (FULLSCREEN) -->
+  <div id="game-screen" class="screen">
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- HUD Overlay -->
+    <div class="hud-overlay">
+      <div>SCORE: <span id="score">0</span></div>
+      <div>COMBO: <span id="combo">0</span>x</div>
+    </div>
+
+    <!-- Side Panel Overlay -->
+    <div class="side-panel-overlay">
+      <div class="overlay-card">
+        <h3>STATUS</h3>
+        <div id="status-msg">Aguardando...</div>
+        <div id="gamepad-status" style="color: #e74c3c; font-size: 1.2rem; margin-top: 5px;">Gamepad: Desconectado</div>
+      </div>
+      <div class="overlay-card" id="yt-player-container" style="display: none; padding:0; overflow:hidden;">
+        <div id="yt-player"></div>
+      </div>
+      <button onclick="stopGameAndReturn()" style="background: #a93226; border-color: #922b21; font-size: 1.4rem; padding: 10px;">ABORTAR MÚSICA</button>
+    </div>
+
+    <!-- Controles Rodapé -->
+    <div class="controls-legend-overlay">
+      <div class="key-box c-green"><div class="title">VERDE</div><div class="btn-info" id="leg-key-0">T: [A] | G: [B0]</div></div>
+      <div class="key-box c-red"><div class="title">VERM.</div><div class="btn-info" id="leg-key-1">T: [S] | G: [B1]</div></div>
+      <div class="key-box c-yellow"><div class="title">AMAR.</div><div class="btn-info" id="leg-key-2">T: [J] | G: [B2]</div></div>
+      <div class="key-box c-blue"><div class="title">AZUL</div><div class="btn-info" id="leg-key-3">T: [K] | G: [B3]</div></div>
+      <div class="key-box c-orange"><div class="title">LARAN.</div><div class="btn-info" id="leg-key-4">T: [L] | G: [B4]</div></div>
+    </div>
+  </div>
+
+  <!-- Hub Modal -->
+  <div id="hub-modal">
+    <div class="modal-content">
+      <h2>AJUSTE DE CONTROLES</h2>
+      <div id="mappingRows"></div>
+      <button onclick="closeHub()" style="margin-top: 20px;">SALVAR CONFIGURAÇÃO</button>
+    </div>
+  </div>
+
+  <!-- Toast Notificações -->
+  <div id="toast-notification">
+    <span style="font-size: 2rem;">🏆</span>
+    <div>
+      <div id="toast-title" style="font-size: 1.2rem; font-weight: bold;">Conquista!</div>
+      <div id="toast-desc" style="font-size: 1rem;">Desc</div>
+    </div>
+  </div>
+
+  <audio id="bgMusic"></audio>
+
+  <script>
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      if(id === 'game-screen') resizeCanvas();
+    }
+
+    // AQUI ESTÁ O SEU CATÁLOGO DE MÚSICAS!
+    // Substitua os dados abaixo pelos nomes exatos que estão na sua pasta "Guitar Music"
+    const setlist = [
+      { id: 1, title: "Primeira Música", artist: "Banda 1", file: "Guitar Music/musica1.mp3", bestScore: 0 },
+      { id: 2, title: "Segunda Música", artist: "Banda 2", file: "Guitar Music/musica2.mp3", bestScore: 0 },
+      { id: 3, title: "Adicione mais uma", artist: "Seu Artista", file: "Guitar Music/musica3.mp3", bestScore: 0 }
+    ];
+
+    let currentSongId = null;
+
+    function renderSetlist() {
+      const c = document.getElementById('setlist-songs'); 
+      c.innerHTML = "";
+      
+      setlist.forEach(song => {
+        const div = document.createElement('div'); 
+        div.className = 'song-item';
+        div.onclick = () => loadSongFromGitHub(song.file, song.id);
+        
+        div.innerHTML = `
+          <div style="display: flex; align-items: center;">
+            <div>
+              <div class="song-title">${song.title}</div>
+              <div class="song-artist">${song.artist}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center;">
+            <div class="song-score">Max: ${song.bestScore}</div>
+            <div class="song-play-icon">▶</div>
+          </div>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score"), comboEl = document.getElementById("combo");
+    const bgMusic = document.getElementById("bgMusic"), statusMsgEl = document.getElementById("status-msg");
+
+    // Lógica FullScreen & Responsividade
+    let LANE_WIDTH = 120;
+    let offsetX = 0;
+    let TARGET_Y = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      TARGET_Y = canvas.height - 120;
+      LANE_WIDTH = Math.min(140, window.innerWidth / 6);
+      offsetX = (canvas.width - (LANE_WIDTH * 5)) / 2;
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    let LANES = [
+      { name: "Verde", color: "#2ecc71", key: "a", gpBtn: 0, glow: "rgba(46, 204, 113, 0.6)" },
+      { name: "Vermelho", color: "#e74c3c", key: "s", gpBtn: 1, glow: "rgba(231, 76, 60, 0.6)" },
+      { name: "Amarelo", color: "#f1c40f", key: "j", gpBtn: 2, glow: "rgba(241, 196, 15, 0.6)" },
+      { name: "Azul", color: "#3498db", key: "k", gpBtn: 3, glow: "rgba(52, 152, 219, 0.6)" },
+      { name: "Laranja", color: "#e67e22", key: "l", gpBtn: 4, glow: "rgba(230, 126, 34, 0.6)" }
+    ];
+
+    const HIT_WINDOW = 60;
+    let NOTE_SPEED = 600;
+    const DIFFICULTY_SETTINGS = {
+      easy:   { speed: 450, minGap: 0.38, lanesCount: 4, rmsMult: 1.55 },
+      medium: { speed: 650, minGap: 0.22, lanesCount: 5, rmsMult: 1.35 },
+      hard:   { speed: 850, minGap: 0.14, lanesCount: 5, rmsMult: 1.15 }
+    };
+
+    let score = 0, combo = 0, isPlaying = false, mode = "";
+    let notes = [], particles = [], texts = [], laneFlashes = [0, 0, 0, 0, 0], prevGamepadButtons = [false, false, false, false, false];
+    let ytPlayer = null, ytReady = false, audioCtx = null;
+
+    async function loadSongFromGitHub(filePath, songId) {
+      showScreen('game-screen'); document.getElementById('yt-player-container').style.display = 'none';
+      currentSongId = songId; mode = "mp3"; resetGameState();
+      setStatus("Carregando Riff...", "#c5a059");
+      
+      try {
+        const response = await fetch(filePath);
+        if (!response.ok) throw new Error("Erro na rede ou arquivo ausente");
+        const arrayBuffer = await response.arrayBuffer();
+        notes = await analyzeAudioAndGenerateNotes(arrayBuffer, document.getElementById("difficultySelect").value);
+        const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+        bgMusic.src = URL.createObjectURL(blob); bgMusic.currentTime = 0; bgMusic.play(); isPlaying = true;
+      } catch (e) { 
+        setStatus("Erro de Conexão ou Arquivo", "#e74c3c"); 
+        alert("Erro ao carregar a música! Isso acontece se você abriu o arquivo direto (file://) ou se o arquivo MP3 não estiver na pasta com o nome exato. Teste no GitHub Pages ou use o Live Server.");
+        stopGameAndReturn();
+      }
+    }
+
+    async function analyzeAudioAndGenerateNotes(arrayBuffer, diffLevel) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const decodedData = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      const channelData = decodedData.getChannelData(0);
+      const chunkSize = Math.floor(decodedData.sampleRate * 0.035);
+      const diff = DIFFICULTY_SETTINGS[diffLevel];
+      NOTE_SPEED = diff.speed;
+      let history = [], beatChart = [], lastLane = -1;
+
+      for (let i = 0; i < channelData.length; i += chunkSize) {
+        let sum = 0;
+        for (let j = 0; j < chunkSize && (i + j) < channelData.length; j++) sum += channelData[i + j] * channelData[i + j];
+        let rms = Math.sqrt(sum / chunkSize);
+        let time = i / decodedData.sampleRate;
+        history.push(rms); if (history.length > 12) history.shift();
+        let avgRms = history.reduce((a, b) => a + b, 0) / history.length;
+
+        if (rms > avgRms * diff.rmsMult && rms > 0.05) {
+          const lastTime = beatChart.length > 0 ? beatChart[beatChart.length - 1].time : -1;
+          if (time - lastTime > diff.minGap) {
+            let lane = Math.floor(Math.random() * diff.lanesCount);
+            if (lane === lastLane) lane = (lane + 1) % diff.lanesCount;
+            lastLane = lane;
+            beatChart.push({ time: time, lane: lane, hit: false, missed: false, shakeTimer: 0 });
+          }
+        }
+      }
+      setStatus(`ROCK ON! ${beatChart.length} notas`, "#2ecc71"); return beatChart;
+    }
+
+    bgMusic.onended = () => {
+      isPlaying = false; setStatus("Música finalizada!", "#2ecc71");
+      if (currentSongId) {
+        let song = setlist.find(s => s.id === currentSongId);
+        if (song && score > song.bestScore) song.bestScore = score;
+      }
+      setTimeout(() => { showScreen('setlist-screen'); renderSetlist(); }, 3000);
+    };
+
+    function stopGameAndReturn() { 
+      isPlaying = false; 
+      bgMusic.pause(); 
+      if(ytPlayer && typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo(); 
+      showScreen('menu-screen'); 
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
+      if (remappingLane !== null && remappingType === 'key') { LANES[remappingLane].key = e.key.toLowerCase(); remappingLane = null; remappingType = null; updateControlLegend(); renderHubRows(); return; }
+      LANES.forEach((lane, index) => { if (lane.key === e.key.toLowerCase()) strumLane(index); });
+    });
+
+    // TRAVA DE SEGURANÇA NO GAMEPAD
+    function pollGamepad() {
+      try {
+        if (!navigator.getGamepads) return;
+        const gamepads = navigator.getGamepads(); 
+        if (!gamepads || !gamepads[0]) return; 
+        const gp = gamepads[0];
+        
+        if (remappingLane !== null && remappingType === 'gp') {
+          gp.buttons.forEach((btn, index) => { if (btn.pressed) { LANES[remappingLane].gpBtn = index; remappingLane = null; remappingType = null; updateControlLegend(); renderHubRows(); }}); return;
+        }
+        LANES.forEach((lane, index) => {
+          const isPressed = gp.buttons[lane.gpBtn] && gp.buttons[lane.gpBtn].pressed;
+          if (isPressed && !prevGamepadButtons[index]) strumLane(index);
+          prevGamepadButtons[index] = isPressed;
+        });
+      } catch (error) {
+        // Ignora erros silenciosamente
+      }
+    }
+
+    function strumLane(laneIndex) {
+      if (!isPlaying) return;
+      laneFlashes[laneIndex] = 1.0;
+      let hitFound = false;
+      for (let i = 0; i < notes.length; i++) {
+        const note = notes[i];
+        if (note.lane === laneIndex && !note.hit && !note.missed) {
+          if (Math.abs(note.y - TARGET_Y) <= HIT_WINDOW) {
+            note.hit = true; hitFound = true;
+            score += 100 + (combo * 10); combo++; note.shakeTimer = 15;
+            spawnParticles(offsetX + note.lane * LANE_WIDTH + LANE_WIDTH/2, TARGET_Y, LANES[note.lane].color);
+            spawnText("PERFECT", offsetX + 2.5 * LANE_WIDTH, TARGET_Y - 150, LANES[note.lane].color);
+            showAchievement("Primeiro Acorde");
+            break;
+          }
+        }
+      }
+      if (!hitFound) { combo = 0; spawnText("MISS", offsetX + 2.5 * LANE_WIDTH, TARGET_Y - 150, "#e74c3c"); laneFlashes = [0.6, 0.6, 0.6, 0.6, 0.6]; }
+      scoreEl.innerText = score; comboEl.innerText = combo;
+    }
+
+    function setStatus(msg, color) { statusMsgEl.innerText = msg; statusMsgEl.style.color = color; }
+    function resetGameState() { score = 0; combo = 0; notes = []; particles = []; texts = []; scoreEl.innerText = score; comboEl.innerText = combo; }
+    function spawnParticles(x, y, color) { for(let i=0; i<20; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.0, color: color }); }
+    function spawnText(msg, x, y, color) { texts.push({ msg, x, y, life: 1.0, color }); }
+
+    function getCurrentTime() { return (mode === "yt" && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : bgMusic.currentTime; }
+
+    function gameLoop() {
+      if(canvas.width === 0) resizeCanvas();
+      pollGamepad();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(offsetX, 0, LANE_WIDTH * 5, canvas.height);
+      
+      if (isPlaying) {
+        const currentTime = getCurrentTime();
+        const fretSpacing = NOTE_SPEED * 0.4;
+        const beatOffset = (currentTime * NOTE_SPEED) % fretSpacing;
+        ctx.strokeStyle = "#222"; ctx.lineWidth = 4;
+        for (let y = TARGET_Y + fretSpacing - beatOffset; y > -100; y -= fretSpacing) {
+          ctx.beginPath(); ctx.moveTo(offsetX, y); ctx.lineTo(offsetX + 5 * LANE_WIDTH, y); ctx.stroke();
+        }
+      }
+
+      LANES.forEach((lane, i) => {
+        const x = offsetX + (i * LANE_WIDTH);
+        if (laneFlashes[i] > 0) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${laneFlashes[i] * 0.25})`; ctx.fillRect(x, 0, LANE_WIDTH, canvas.height); laneFlashes[i] -= 0.05;
+        }
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; ctx.lineWidth = 2; ctx.strokeRect(x, 0, LANE_WIDTH, canvas.height);
+        
+        ctx.beginPath(); ctx.ellipse(x + LANE_WIDTH / 2, TARGET_Y, LANE_WIDTH * 0.35, LANE_WIDTH * 0.15, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#111"; ctx.fill();
+        ctx.strokeStyle = laneFlashes[i] > 0.5 ? "#fff" : lane.color; ctx.lineWidth = laneFlashes[i] > 0.5 ? 5 : 3; ctx.stroke();
+      });
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(offsetX, TARGET_Y); ctx.lineTo(offsetX + 5 * LANE_WIDTH, TARGET_Y); ctx.stroke();
+
+      if (isPlaying) {
+        const currentTime = getCurrentTime();
+        notes.forEach(note => {
+          if (note.hit) {
+            if (note.shakeTimer > 0) {
+              const nx = offsetX + note.lane * LANE_WIDTH + LANE_WIDTH / 2;
+              ctx.save(); ctx.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10);
+              ctx.beginPath(); ctx.ellipse(nx, TARGET_Y, LANE_WIDTH*0.35, LANE_WIDTH*0.15, 0, 0, Math.PI * 2);
+              ctx.fillStyle = LANES[note.lane].color; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.stroke();
+              ctx.restore(); note.shakeTimer--;
+            }
+            return;
+          }
+          note.y = TARGET_Y - ((note.time - currentTime) * NOTE_SPEED);
+          
+          if (note.y > TARGET_Y + HIT_WINDOW && !note.missed) { note.missed = true; combo = 0; spawnText("MISS", offsetX + 2.5 * LANE_WIDTH, TARGET_Y - 150, "#e74c3c"); scoreEl.innerText = score; comboEl.innerText = combo; }
+
+          if (note.y > -50 && note.y < canvas.height + 50 && !note.missed) {
+            const nx = offsetX + note.lane * LANE_WIDTH + LANE_WIDTH / 2;
+            ctx.fillStyle = LANES[note.lane].glow; ctx.fillRect(nx - 10, note.y - 40, 20, 40); 
+            ctx.beginPath(); ctx.ellipse(nx, note.y, LANE_WIDTH*0.35, LANE_WIDTH*0.15, 0, 0, Math.PI * 2);
+            ctx.fillStyle = LANES[note.lane].color; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); 
+          }
+        });
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.05; if (p.life <= 0) { particles.splice(i, 1); continue; } ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1.0;
+      for (let i = texts.length - 1; i >= 0; i--) { let t = texts[i]; t.y -= 3; t.life -= 0.03; if (t.life <= 0) { texts.splice(i, 1); continue; } ctx.globalAlpha = t.life; ctx.fillStyle = t.color; ctx.font = "bold 50px 'Teko', sans-serif"; ctx.textAlign = "center"; ctx.shadowBlur = 10; ctx.shadowColor = "#000"; ctx.fillText(t.msg, t.x, t.y); ctx.shadowBlur = 0; } ctx.globalAlpha = 1.0;
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // YOUTUBE COM PROTEÇÃO DE BLOQUEIO DE CÓDIGO
+    function onYouTubeIframeAPIReady() { 
+      ytPlayer = new YT.Player('yt-player', { 
+        height: '180', width: '100%', videoId: '', 
+        events: { 
+          'onReady': () => { ytReady = true; }, 
+          'onStateChange': (e) => { 
+            if (e.data === YT.PlayerState.PLAYING) isPlaying = true; 
+            else if (e.data === YT.PlayerState.ENDED) { isPlaying = false; showScreen('menu-screen'); } 
+          } 
+        } 
+      }); 
+    }
+
+    document.getElementById("startYtBtn").addEventListener("click", () => {
+      if (!ytReady) {
+        alert("O Navegador bloqueou o YouTube! Isso acontece ao tentar jogar offline direto do seu PC sem servidor. Use a extensão Live Server ou suba o jogo para o GitHub Pages.");
+        return;
+      }
+      
+      const url = document.getElementById("ytUrl").value; 
+      if(!url) return;
+      
+      let videoId = null;
+      try {
+        if(url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+        else if(url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
+      } catch(e) {}
+
+      if (videoId) {
+        showScreen('game-screen'); document.getElementById('yt-player-container').style.display = 'block';
+        mode = "yt"; currentSongId = null; resetGameState();
+        const diff = DIFFICULTY_SETTINGS[document.getElementById("ytDifficultySelect").value];
+        NOTE_SPEED = diff.speed; notes = [];
+        for(let t = 2.0; t < 300; t += diff.minGap * 2.0) notes.push({ time: t, lane: Math.floor(Math.random()*diff.lanesCount), hit: false, missed: false, shakeTimer: 0 });
+        ytPlayer.loadVideoById(videoId); setStatus("Tocando...", "#3498db");
+      } else {
+        alert("Link do YouTube inválido! Cole um link de vídeo válido.");
+      }
+    });
+
+    let remappingLane = null, remappingType = null;
+    function openHub() { renderHubRows(); document.getElementById("hub-modal").style.display = "flex"; }
+    function closeHub() { remappingLane = null; remappingType = null; document.getElementById("hub-modal").style.display = "none"; }
+    function renderHubRows() {
+      const c = document.getElementById("mappingRows"); c.innerHTML = "";
+      LANES.forEach((l, i) => {
+        c.innerHTML += `<div class="mapping-row"><span style="color:${l.color};">${l.name.toUpperCase()}:</span><div>
+          <button class="map-btn" onclick="startRemap(${i}, 'key')">${remappingLane===i && remappingType==='key' ? 'Aguardando...' : 'TEC: [' + l.key.toUpperCase() + ']'}</button>
+          <button class="map-btn" onclick="startRemap(${i}, 'gp')">${remappingLane===i && remappingType==='gp' ? 'Aguardando...' : 'GP: [B' + l.gpBtn + ']'}</button></div></div>`;
+      });
+    }
+    window.startRemap = function(i, t) { remappingLane = i; remappingType = t; renderHubRows(); };
+    function updateControlLegend() { LANES.forEach((l, i) => { document.getElementById(`leg-key-${i}`).innerText = `T: [${l.key.toUpperCase()}] | G: [B${l.gpBtn}]`; }); }
+
+    let ach_unlocked = false;
+    function showAchievement(title) {
+      if(ach_unlocked) return; ach_unlocked = true;
+      document.getElementById("toast-desc").innerText = title;
+      const toast = document.getElementById("toast-notification");
+      toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 4000);
+    }
+
+    window.addEventListener("gamepadconnected", () => { document.getElementById("gamepad-status").innerText = "Gamepad: OK!"; document.getElementById("gamepad-status").style.color = "#2ecc71"; });
+    updateControlLegend(); requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
