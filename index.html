@@ -141,8 +141,8 @@
 
   <!-- MENU PRINCIPAL -->
   <div id="menu-screen" class="screen active">
-    <!-- IMAGEM DA LOGO NOVA RIFF MASTER -->
-    <img src="Riff Master_2.jpg" alt="Riff Master Logo" id="main-logo">
+    <!-- LOGO RIFF MASTER -->
+    <img src="Riff Master_2.jpg" alt="Riff Master Logo" id="main-logo" onerror="this.style.display='none'; alert('Logo não encontrada! Verifique se o arquivo Riff Master_2.jpg está no GitHub.')">
     
     <ul class="menu-list">
       <li onclick="showScreen('setlist-screen'); renderSetlist();">Catálogo de Músicas</li>
@@ -166,6 +166,7 @@
       <p style="font-size: 1.2rem; color: #888; text-align: center; margin-bottom: 10px;">Clique em uma música abaixo para começar a tocar</p>
       
       <div class="song-list" id="setlist-songs">
+        <!-- O JS vai gerar a lista aqui -->
       </div>
       
       <button class="btn-back" onclick="showScreen('menu-screen')">Voltar ao Início</button>
@@ -246,9 +247,8 @@
     }
 
     // AQUI ESTÁ O SEU CATÁLOGO DE MÚSICAS!
-    // Substitua os dados abaixo pelos nomes exatos que estão na sua pasta "Guitar Music"
     const setlist = [
-      { id: 1, title: "Primeira Música", artist: "Banda 1", file: "Riff Music/Guitar Hero III (#35) White Zombie (WaveGroup) - Black Sunshine - RED (youtube).mp3.mp3", bestScore: 0 },
+      { id: 1, title: "Primeira Música", artist: "Banda 1", file: "Guitar Music/musica1.mp3", bestScore: 0 },
       { id: 2, title: "Segunda Música", artist: "Banda 2", file: "Guitar Music/musica2.mp3", bestScore: 0 },
       { id: 3, title: "Adicione mais uma", artist: "Seu Artista", file: "Guitar Music/musica3.mp3", bestScore: 0 }
     ];
@@ -285,7 +285,6 @@
     const scoreEl = document.getElementById("score"), comboEl = document.getElementById("combo");
     const bgMusic = document.getElementById("bgMusic"), statusMsgEl = document.getElementById("status-msg");
 
-    // Lógica FullScreen & Responsividade
     let LANE_WIDTH = 120;
     let offsetX = 0;
     let TARGET_Y = 0;
@@ -319,22 +318,43 @@
     let notes = [], particles = [], texts = [], laneFlashes = [0, 0, 0, 0, 0], prevGamepadButtons = [false, false, false, false, false];
     let ytPlayer = null, ytReady = false, audioCtx = null;
 
+    // --- LÓGICA BLINDADA DE DOWNLOAD ---
     async function loadSongFromGitHub(filePath, songId) {
-      showScreen('game-screen'); document.getElementById('yt-player-container').style.display = 'none';
-      currentSongId = songId; mode = "mp3"; resetGameState();
-      setStatus("Carregando Riff...", "#c5a059");
+      // 1. Não muda de tela ainda. Mantém o jogador no menu para evitar tela preta.
+      const btnTextOriginal = document.getElementById("status-msg").innerText;
       
+      // Aviso visual no console para debug
+      console.log(`Tentando baixar: ${filePath}`);
+
       try {
         const response = await fetch(filePath);
-        if (!response.ok) throw new Error("Erro na rede ou arquivo ausente");
+        
+        // 2. Se o GitHub retornar erro 404 (Não Encontrado), trava tudo aqui!
+        if (!response.ok) {
+          throw new Error(`O arquivo não foi encontrado no GitHub. Caminho buscado: ${filePath}`);
+        }
+        
         const arrayBuffer = await response.arrayBuffer();
         notes = await analyzeAudioAndGenerateNotes(arrayBuffer, document.getElementById("difficultySelect").value);
+        
+        // 3. Sucesso absoluto! Agora sim, carrega a tela do jogo.
+        showScreen('game-screen'); 
+        document.getElementById('yt-player-container').style.display = 'none';
+        currentSongId = songId; 
+        mode = "mp3"; 
+        resetGameState();
+        
         const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-        bgMusic.src = URL.createObjectURL(blob); bgMusic.currentTime = 0; bgMusic.play(); isPlaying = true;
+        bgMusic.src = URL.createObjectURL(blob); 
+        bgMusic.currentTime = 0; 
+        bgMusic.play(); 
+        isPlaying = true;
+        setStatus("Carregando Riff...", "#c5a059");
+
       } catch (e) { 
-        setStatus("Erro de Conexão ou Arquivo", "#e74c3c"); 
-        alert("Erro ao carregar a música! Isso acontece se você abriu o arquivo direto (file://) ou se o arquivo MP3 não estiver na pasta com o nome exato. Teste no GitHub Pages ou use o Live Server.");
-        stopGameAndReturn();
+        // 4. Se der erro, mostra alerta claro e não abre a tela preta.
+        console.error(e);
+        alert(`❌ FALHA AO CARREGAR A MÚSICA!\n\nErro: O jogo tentou buscar "${filePath}", mas não encontrou.\n\nVerifique no seu repositório do GitHub se:\n- A pasta está escrita EXATAMENTE "Guitar Music".\n- O arquivo está com o nome e a extensão corretos.\n\nO GitHub diferencia maiúsculas de minúsculas!`);
       }
     }
 
@@ -390,7 +410,6 @@
       LANES.forEach((lane, index) => { if (lane.key === e.key.toLowerCase()) strumLane(index); });
     });
 
-    // TRAVA DE SEGURANÇA NO GAMEPAD
     function pollGamepad() {
       try {
         if (!navigator.getGamepads) return;
@@ -406,9 +425,7 @@
           if (isPressed && !prevGamepadButtons[index]) strumLane(index);
           prevGamepadButtons[index] = isPressed;
         });
-      } catch (error) {
-        // Ignora erros silenciosamente
-      }
+      } catch (error) {}
     }
 
     function strumLane(laneIndex) {
@@ -503,7 +520,6 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // YOUTUBE COM PROTEÇÃO DE BLOQUEIO DE CÓDIGO
     function onYouTubeIframeAPIReady() { 
       ytPlayer = new YT.Player('yt-player', { 
         height: '180', width: '100%', videoId: '', 
@@ -518,11 +534,6 @@
     }
 
     document.getElementById("startYtBtn").addEventListener("click", () => {
-      if (!ytReady) {
-        alert("O Navegador bloqueou o YouTube! Isso acontece ao tentar jogar offline direto do seu PC sem servidor. Use a extensão Live Server ou suba o jogo para o GitHub Pages.");
-        return;
-      }
-      
       const url = document.getElementById("ytUrl").value; 
       if(!url) return;
       
